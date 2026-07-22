@@ -104,12 +104,12 @@ const ps=[5000,6000,5000,5000,5000,5000,6000,0,0,0];
 const eur=(v)=>'€'+Number(v).toLocaleString('it-IT',{maximumFractionDigits:0});
 new Chart(document.getElementById('c'),{type:'bar',data:{labels,datasets:[
  {label:'Ricavi',data:ricavi,backgroundColor:'#F7BC2A',stack:'r',borderRadius:3,categoryPercentage:0.72,barPercentage:0.98},
- {label:'Ordini',data:ordini,backgroundColor:'#1A1A1A',stack:'c',categoryPercentage:0.72,barPercentage:0.98},
- {label:'Spese carta',data:spese,backgroundColor:'#4D4D4D',stack:'c',categoryPercentage:0.72,barPercentage:0.98},
- {label:'Costo lavoro reale',data:lavReale,backgroundColor:'#6E6E6E',stack:'c',categoryPercentage:0.72,barPercentage:0.98},
- {label:'Costo lavoro teorico',data:lavResiduo,backgroundColor:'#949494',stack:'c',categoryPercentage:0.72,barPercentage:0.98},
- {label:'Sales fee 15%',data:salesfee,backgroundColor:'#B5B5B5',stack:'c',categoryPercentage:0.72,barPercentage:0.98},
- {label:'Profit sharing',data:ps,backgroundColor:'#D6D6D6',stack:'c',borderRadius:{topLeft:3,topRight:3},categoryPercentage:0.72,barPercentage:0.98}]},
- options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:(x)=>x.dataset.label+': '+eur(x.raw)}}},
- scales:{x:{stacked:true,ticks:{color:'#666'},grid:{display:false}},y:{stacked:true,min:0,max:100000,ticks:{stepSize:20000,callback:(v)=>'€'+(v/1000)+'k',color:'#666'},grid:{color:'#E5E5E5'}}}}});
+ {label:'Ordini',data:ordini.map(v=>-v),backgroundColor:'#1A1A1A',stack:'c',categoryPercentage:0.72,barPercentage:0.98},
+ {label:'Spese carta',data:spese.map(v=>-v),backgroundColor:'#4D4D4D',stack:'c',categoryPercentage:0.72,barPercentage:0.98},
+ {label:'Costo lavoro reale',data:lavReale.map(v=>-v),backgroundColor:'#6E6E6E',stack:'l',categoryPercentage:0.72,barPercentage:0.98},
+ {label:'Costo lavoro teorico',data:lavResiduo.map(v=>-v),backgroundColor:'#949494',stack:'l',borderRadius:{topLeft:3,topRight:3},categoryPercentage:0.72,barPercentage:0.98},
+ {label:'Sales fee 15%',data:salesfee.map(v=>-v),backgroundColor:'#B5B5B5',stack:'c',categoryPercentage:0.72,barPercentage:0.98},
+ {label:'Profit sharing',data:ps.map(v=>-v),backgroundColor:'#D6D6D6',stack:'c',borderRadius:{topLeft:3,topRight:3},categoryPercentage:0.72,barPercentage:0.98}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:(x)=>x.dataset.label+': '+eur(Math.abs(x.raw))}}},
+ scales:{x:{stacked:true,ticks:{color:'#666'},grid:{display:false}},y:{stacked:true,min:-60000,max:100000,ticks:{stepSize:20000,callback:(v)=>'€'+(Math.abs(v)/1000)+'k',color:'#666'},grid:{color:'#E5E5E5'}}}}});
 </script></body></html>
