@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAIRFLAI 2026 — Dashboard live</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root{color-scheme:light;--bk:#1A1A1A;--gold:#F7BC2A;--grey:#666;--gl:#F2F2F2;}
+*{box-sizing:border-box;}
+body{margin:0;background:#fff;color:var(--bk);font-family:'Inter','Helvetica Neue',Arial,sans-serif;padding:20px;}
+h1{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:0 0 4px;}
+.muted{color:var(--grey);font-size:12px;margin:0 0 14px;}
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--bk);margin-bottom:16px;flex-wrap:wrap;}
+.tabs button{font-family:inherit;font-size:13.5px;font-weight:700;border:none;background:transparent;padding:9px 16px;cursor:pointer;color:var(--grey);border-radius:8px 8px 0 0;}
+.tabs button.active{background:var(--bk);color:#fff;}
+.panel{display:none;} .panel.active{display:block;}
+.kpis{background:var(--bk);border-radius:12px;padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;}
+.kpis .lbl{font-size:10px;color:var(--gl);margin:0 0 5px;} .kpis .val{font-size:18px;font-weight:800;margin:0;color:#fff;} .kpis .gold{color:var(--gold);}
+.card{background:#fff;border:.5px solid #E2E2E2;border-radius:12px;padding:16px;margin-bottom:16px;}
+.card h2{font-size:14px;font-weight:800;margin:0 0 10px;}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 10px;font-size:12px;color:var(--grey);}
+.legend span{display:flex;align-items:center;gap:5px;} .sw{width:11px;height:11px;border-radius:2px;display:inline-block;}
+.chart{position:relative;width:100%;height:380px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid #EDEDED;}
+td.n,th.n{text-align:right;white-space:nowrap;}
+thead th{position:sticky;top:0;background:var(--gold);color:var(--bk);font-weight:800;}
+.scroll{max-height:560px;overflow:auto;border:.5px solid #E2E2E2;border-radius:8px;}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;}
+.foot{color:var(--grey);font-size:11px;margin-top:8px;line-height:1.5;}
+.psrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 2px;}
+.psrow label{font-size:11px;color:var(--grey);display:flex;flex-direction:column;gap:2px;}
+.psrow input{width:70px;padding:4px 6px;border:1px solid #DDD;border-radius:6px;font-family:inherit;font-size:12px;}
+.warn{background:#FFF8E6;border:1px solid var(--gold);border-radius:8px;padding:10px 14px;font-size:12.5px;color:#5b4a12;margin-bottom:12px;}
+#status{font-size:12px;color:var(--grey);padding:8px 0;}
+</style></head><body>
+<h1>FAIRFLAI 2026 — Dashboard live</h1>
+<p class="muted">Dati letti da Monday in tempo reale. Perimetro: Delivery Package con ME=FAIRFLAI. Assunzioni fisse: sales fee 15%, costo lavoro 40% del netto ordini.</p>
+<div id="status">Caricamento dati da Monday…</div>
+<div id="app" style="display:none">
+<div class="tabs">
+ <button class="active" data-t="0">Riepilogo</button>
+ <button data-t="1">DP per mese</button>
+ <button data-t="2">Costi</button>
+ <button data-t="3">Progetti</button>
+ <button data-t="4">Qualità dati</button>
+</div>
+
+<div class="panel active" id="p0">
+ <div class="kpis" id="kpis"></div>
+ <div class="card">
+  <h2>Ricavi (sopra) vs costi (sotto) — 2026</h2>
+  <div class="legend">
+   <span><span class="sw" style="background:#F7BC2A"></span>Ricavi</span>
+   <span><span class="sw" style="background:#1A1A1A"></span>Ordini</span>
+   <span><span class="sw" style="background:#4D4D4D"></span>Spese carta</span>
+   <span><span class="sw" style="background:#B5B5B5"></span>Sales fee 15%</span>
+   <span><span class="sw" style="background:#D6D6D6"></span>Profit sharing</span>
+   <span><span class="sw" style="background:#6E6E6E"></span>Costo lavoro reale</span>
+   <span><span class="sw" style="background:#949494"></span>Costo lavoro teorico</span>
+  </div>
+  <div class="chart"><canvas id="c"></canvas></div>
+  <p class="foot" id="note"></p>
+ </div>
+</div>
+<div class="panel" id="p1"><div class="card"><h2 id="h1"></h2><div class="scroll"><table><thead><tr><th>Mese</th><th>Progetto</th><th>Delivery Package</th><th>Tipo</th><th class=n>Valore €</th><th>Stato DP</th><th>PO</th><th>Stato Fatturato</th></tr></thead><tbody id="tdp"></tbody></table></div></div></div>
+<div class="panel" id="p2"><div class="grid2">
+ <div class="card"><h2 id="ho"></h2><div class="scroll"><table><thead><tr><th>Mese</th><th>Ordine</th><th class=n>Importo €</th><th>Tipologia</th><th>Stato</th></tr></thead><tbody id="tord"></tbody></table></div></div>
+ <div class="card"><h2 id="hs"></h2><div class="scroll"><table><thead><tr><th>Mese</th><th>Spesa</th><th class=n>Importo €</th><th>Anno</th></tr></thead><tbody id="tspe"></tbody></table></div></div>
+</div></div>
+<div class="panel" id="p3"><div class="card"><h2>Progetti FAIRFLAI — incarichi % su valore DP</h2><div class="scroll"><table><thead><tr><th>Progetto</th><th class=n>Valore DP €</th><th class=n>Incarichi €</th><th class=n>Incarichi %</th></tr></thead><tbody id="tprj"></tbody></table></div></div></div>
+<div class="panel" id="p4"><div class="card"><h2 id="hq"></h2><div id="qwrap"></div></div></div>
+<div class="card" style="margin-top:6px"><h2>Profit sharing per mese (€) — modificabile, salvato nel browser</h2><div class="psrow" id="psrow"></div><p class="foot">Default ipotizzato: €7.000/mese da agosto in poi.</p></div>
+</div>
+
+<script>
+async function mapi(query){
+  const r=await fetch('/api/monday',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query})});
+  const j=await r.json();
+  if(j.errors){throw new Error(j.errors[0].message||'Errore Monday');}
+  if(j.error){throw new Error(j.error);}
+  return j.data;
+}
+let DATA=null, chart=null;
+function ymByDp(r){ return (r.m>=1&&r.m<=12)? r.m : 0; }
+function parseAll(d){
+  const dp=(d.dp[0].items_page.items||[]).map(it=>{const c=cv(it),p=it.parent_item||{},pc=cv(p);
+    return {id:it.id,dp:it.name,prog:p.name||'',val:num(c.numbers),inc:sumList(c.mirror1),
+      m:(mi(c.formula_mm44hm2f)||mi(c.formula_mkr3d8gs)),st:c.status,tp:c.color_mkz5mqxn,po:c.text,fatt:c.mirror0};});
+  const ord=(d.ord[0].items_page.items||[]).map(it=>{const c=cv(it);const dt=c.date,cr=c.creation_log8;
+    const m=dt?mi(String(dt).slice(5,7)):(cr?mi(String(cr).slice(5,7)):0);
+    return {m,nome:it.name,imp:num(c.numbers6)||0,tp:c.status4,st:c.status};});
+  const seen={},cc=[];
+  (d.cc[0].items_page.items||[]).forEach(it=>{if(seen[it.id])return;seen[it.id]=1;const c=cv(it);
+    if(String(c.formula3)!=='2026')return;const mese=c.formula_mkz4dabd;const m=MESI.indexOf(mese)+1;
+    cc.push({m:m>0?m:0,nome:it.name,imp:num(c.importo____)||0,anno:c.formula3});});
+  const projSubs=[];
+  (d.proj[0].items_page.items||[]).forEach(pr=>{(pr.subitems||[]).forEach(s=>{const c=cv(s);
+    projSubs.push({id:s.id,dp:s.name,prog:pr.name,val:num(c.numbers),tp:c.color_mkz5mqxn});});});
+  return {dp,ord,cc,projSubs};
+}
+function getPS(){ let v=null; try{v=JSON.parse(localStorage.getItem('ff_ps'));}catch(e){}
+  if(!v||v.length!==12) v=[5000,6000,5000,5000,5000,5000,6000,7000,7000,7000,7000,7000]; return v; }
+function setPS(a){ localStorage.setItem('ff_ps',JSON.stringify(a)); }
+function isSpesa(n){n=(n||'').toLowerCase();return n.includes('spese di trasferta')||n.includes('spese materiali');}
+
+function render(){
+  const {dp,ord,cc}=DATA;
+  const monthsSet=new Set();
+  dp.forEach(r=>{if(r.val&&r.m>=1&&r.m<=12)monthsSet.add(r.m);});
+  ord.forEach(o=>{if(o.m>=1&&o.m<=12)monthsSet.add(o.m);});
+  cc.forEach(s=>{if(s.m>=1&&s.m<=12)monthsSet.add(s.m);});
+  const months=[...monthsSet].sort((a,b)=>a-b);
+  const hasND=dp.some(r=>(r.m<1||r.m>12)&&r.val);
+  const labels=months.map(m=>ABBR[m-1]).concat(hasND?['n.d.']:[]);
+  const idx={}; months.forEach((m,i)=>idx[m]=i); const nnd=hasND?labels.length-1:null;
+  const bk=m=>(m>=1&&m<=12&&idx[m]!==undefined)?idx[m]:nnd;
+  const N=labels.length;
+  const rev=Array(N).fill(0),inc=Array(N).fill(0),ordm=Array(N).fill(0),spem=Array(N).fill(0);
+  dp.forEach(r=>{const b=bk(r.m);if(b==null)return;if(r.val)rev[b]+=r.val;if(r.inc)inc[b]+=r.inc;});
+  ord.forEach(o=>{const b=bk(o.m);if(b!=null)ordm[b]+=o.imp;});
+  cc.forEach(s=>{const b=bk(s.m);if(b!=null)spem[b]+=s.imp;});
+  const ps=getPS();
+  const psm=months.map(m=>ps[m-1]||0).concat(hasND?[0]:[]);
+  const teor=rev.map((r,i)=>LAB*(r-ordm[i]));
+  const sfee=rev.map(r=>SFEE*r);
+  const lavRe=teor.map((t,i)=>Math.min(inc[i],Math.max(t,0)));
+  const lavRes=teor.map((t,i)=>Math.max(t-inc[i],0));
+  const T=a=>a.reduce((x,y)=>x+y,0);
+  const tRev=T(rev),tOrd=T(ordm),tSpe=T(spem),tInc=T(inc),tPs=T(psm);
+  const tTeor=LAB*(tRev-tOrd),tSfee=SFEE*tRev;
+  const tCost=tOrd+tSpe+tTeor+tSfee+tPs, marg=tRev-tCost, net=tRev-tOrd;
+  document.getElementById('kpis').innerHTML=[
+   ['RICAVI DP',eur(tRev),'gold'],['COSTO LAVORO (40%)',eur(tTeor),''],['SALES FEE 15%',eur(tSfee),''],
+   ['PROFIT SHARING',eur(tPs),''],['COSTI TOTALI',eur(tCost),''],['MARGINE',eur(marg),'gold']]
+   .map(k=>`<div><p class="lbl">${k[0]}</p><p class="val ${k[2]}">${k[1]}</p></div>`).join('');
+  document.getElementById('note').textContent=`Costo lavoro teorico 40% x (ricavi - ordini) = ${eur(tTeor)}. Incarichi assegnati sui DP = ${eur(tInc)} (${net?Math.round(tInc/net*100):0}% del netto). Scostamento ${eur(tTeor-tInc)}.`;
+  // chart
+  const neg=a=>a.map(v=>-v);
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById('c'),{type:'bar',data:{labels,datasets:[
+   {label:'Ricavi',data:rev,backgroundColor:'#F7BC2A',stack:'r',borderRadius:3,categoryPercentage:.7,barPercentage:.96},
+   {label:'Ordini',data:neg(ordm),backgroundColor:'#1A1A1A',stack:'c',categoryPercentage:.7,barPercentage:.96},
+   {label:'Spese carta',data:neg(spem),backgroundColor:'#4D4D4D',stack:'c',categoryPercentage:.7,barPercentage:.96},
+   {label:'Sales fee 15%',data:neg(sfee),backgroundColor:'#B5B5B5',stack:'c',categoryPercentage:.7,barPercentage:.96},
+   {label:'Profit sharing',data:neg(psm),backgroundColor:'#D6D6D6',stack:'c',categoryPercentage:.7,barPercentage:.96},
+   {label:'Costo lavoro reale',data:neg(lavRe),backgroundColor:'#6E6E6E',stack:'l',categoryPercentage:.7,barPercentage:.96},
+   {label:'Costo lavoro teorico',data:neg(lavRes),backgroundColor:'#949494',stack:'l',categoryPercentage:.7,barPercentage:.96}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.dataset.label+': '+eur(Math.abs(x.raw))}}},
+   scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>'€'+Math.round(Math.abs(v)/1000)+'k'},grid:{color:'#ECECEC'}}}}});
+  // tables
+  const mn=m=>(m>=1&&m<=12)?ABBR[m-1]:'n.d.';
+  const dpt=dp.filter(r=>!isSpesa(r.dp)).sort((a,b)=>((a.m||99)-(b.m||99))||String(a.prog).localeCompare(b.prog));
+  document.getElementById('h1').textContent=`Delivery Package FAIRFLAI per mese (${dpt.length}) — escluse spese di trasferta e materiali`;
+  document.getElementById('tdp').innerHTML=dpt.map(r=>`<tr><td>${mn(r.m)}</td><td>${esc(r.prog)}</td><td>${esc(r.dp)}</td><td>${esc(r.tp)}</td><td class=n>${r.val?eur(r.val):''}</td><td>${esc(r.st)}</td><td>${esc(r.po)}</td><td>${esc(r.fatt)}</td></tr>`).join('');
+  const os=ord.slice().sort((a,b)=>((a.m||99)-(b.m||99))||(b.imp-a.imp));
+  document.getElementById('ho').textContent=`Dettaglio Ordini FAIRFLAI (${os.length})`;
+  document.getElementById('tord').innerHTML=os.map(o=>`<tr><td>${mn(o.m)}</td><td>${esc(o.nome)}</td><td class=n>${eur(o.imp)}</td><td>${esc(o.tp)}</td><td>${esc(o.st)}</td></tr>`).join('');
+  const ss=cc.slice().sort((a,b)=>((a.m||99)-(b.m||99))||(b.imp-a.imp));
+  document.getElementById('hs').textContent=`Dettaglio Spese carta FAIRFLAI 2026 (${ss.length})`;
+  document.getElementById('tspe').innerHTML=ss.map(s=>`<tr><td>${mn(s.m)}</td><td>${esc(s.nome)}</td><td class=n>${eur(s.imp)}</td><td>${esc(s.anno)}</td></tr>`).join('');
+  // progetti
+  const pm={};dp.forEach(r=>{const k=r.prog||'(senza progetto)';(pm[k]=pm[k]||[0,0]);if(r.val)pm[k][0]+=r.val;if(r.inc)pm[k][1]+=r.inc;});
+  const pr=Object.entries(pm).sort((a,b)=>b[1][0]-a[1][0]);
+  const pv=T(pr.map(x=>x[1][0])),pi=T(pr.map(x=>x[1][1]));
+  document.getElementById('tprj').innerHTML=pr.map(([n,[v,i]])=>`<tr><td>${esc(n)}</td><td class=n>${eur(v)}</td><td class=n>${eur(i)}</td><td class=n>${v?(i/v*100).toFixed(1):0}%</td></tr>`).join('')
+   +`<tr style="font-weight:800;border-top:2px solid #1A1A1A"><td>TOTALE</td><td class=n>${eur(pv)}</td><td class=n>${eur(pi)}</td><td class=n>${pv?(pi/pv*100).toFixed(1):0}%</td></tr>`;
+  // qualità dati: DP nei progetti FAIRFLAI non taggati ME=FAIRFLAI
+  const dpIds=new Set(dp.map(r=>r.id));
+  const miss=DATA.projSubs.filter(s=>!dpIds.has(s.id)).sort((a,b)=>String(a.prog).localeCompare(b.prog)||(b.val||0)-(a.val||0));
+  document.getElementById('hq').textContent=`DP nei progetti FAIRFLAI senza ME=FAIRFLAI (${miss.length})`;
+  const qw=document.getElementById('qwrap');
+  if(!miss.length){qw.innerHTML='<p class="foot">Nessun DP da verificare: tutti i Delivery Package dei progetti FAIRFLAI hanno la Micro Enterprise assegnata.</p>';}
+  else{qw.innerHTML=`<div class="warn">Questi DP stanno in progetti con ME progetto = FAIRFLAI ma non risultano taggati ME=FAIRFLAI (vuoti o altra ME, es. Rebel Ship). Vanno verificati/taggati su Monday per rientrare nel perimetro ricavi.</div>`+
+   `<table><thead><tr><th>Progetto</th><th>Delivery Package</th><th>Tipo</th><th class=n>Valore €</th><th>item id</th></tr></thead><tbody>`+
+   miss.map(s=>`<tr><td>${esc(s.prog)}</td><td>${esc(s.dp)}</td><td>${esc(s.tp)}</td><td class=n>${s.val?eur(s.val):''}</td><td>${s.id}</td></tr>`).join('')+`</tbody></table>`;}
+}
+function buildPSrow(){
+  const ps=getPS();
+  document.getElementById('psrow').innerHTML=ABBR.map((m,i)=>`<label>${m}<input type="number" data-m="${i}" value="${ps[i]}"></label>`).join('');
+  document.querySelectorAll('#psrow input').forEach(inp=>inp.addEventListener('change',()=>{
+    const a=getPS();a[+inp.dataset.m]=parseFloat(inp.value)||0;setPS(a);render();}));
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  const t=+b.dataset.t;
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===t));
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x===b));
+}));
+(async()=>{
+  try{
+    const d=await mapi(Q);
+    DATA=parseAll(d);
+    console.log('FAIRFLAI live:',{dp:DATA.dp.length,ord:DATA.ord.length,cc:DATA.cc.length,projSubs:DATA.projSubs.length});
+    document.getElementById('status').style.display='none';
+    document.getElementById('app').style.display='block';
+    buildPSrow(); render();
+  }catch(e){ document.getElementById('status').textContent='Errore nel caricamento da Monday: '+e.message; }
+})();
+</script></body></html>
